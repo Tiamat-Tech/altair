@@ -1,0 +1,43 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`QueryEditorComponent should render correctly 1`] = `
+<app-query-editor>
+  <nz-tabset
+    class="main-view-tabs"
+    nzsize="small"
+    nztabbargutter="16"
+  >
+    <nz-tab>
+      <div
+        class="query-editor-container"
+      >
+        <ngx-codemirror
+          class="query-editor__input"
+          ngdefaultcontrol=""
+        />
+      </div>
+      <div
+        class="variables-editor-container"
+      >
+        <div
+          class="variables-editor--title"
+          track-id="toggle_variables"
+        >
+          
+        </div>
+        
+      </div>
+      
+    </nz-tab>
+    <nz-tab>
+      <app-pre-request-editor />
+      
+    </nz-tab>
+    <nz-tab>
+      <app-post-request-editor />
+      
+    </nz-tab>
+  </nz-tabset>
+  <app-flex-resizer />
+</app-query-editor>
+`;

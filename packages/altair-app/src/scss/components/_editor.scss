@@ -2,6 +2,8 @@ app-query-editor {
   transition: all .3s ease;
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  border-inline-end: 1px solid var(--theme-border-color);
 }
 
 .query-editor-container {
@@ -25,15 +27,19 @@ app-query-editor {
 }
 
 .query-editor__line-widget {
-  color: var(--theme-font-color);
-  font-size: fontsize(12);
+  font-size: fontsize(10);
   cursor: pointer;
   display: inline-block;
-  background: var(--theme-off-bg-color);
-  padding: 3px 5px;
+  // color: var(--theme-font-color);
+  background: var(--primary-color);
+  // background: rgba(var(--rgb-primary), .15);
+  color: var(--theme-font-color);
+  padding: 4px;
+  line-height: 1;
   border-radius: 4px;
   transition: all .3s ease;
   user-select: none;
+  margin: 0 4px;
 
   &:hover {
     background: var(--theme-border-color);
@@ -57,6 +63,14 @@ app-query-editor {
   color: var(--theme-off-font-color);
 }
 
+app-query-result {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.query-result__tabs {
+  flex: 1;
+}
 .query-result__normal-container {
   position: relative;
 
@@ -119,6 +133,29 @@ app-query-editor {
 
   &.send {
     background: var(--primary-color);
+  }
+}
+
+.query-result__top-actions {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
+}
+
+.query-result__clear-button {
+  background: var(--theme-off-bg-color);
+  color: var(--primary-color);
+  opacity: .5;
+  transition: all .3s ease;
+  border: 1px solid var(--primary-color);
+  text-transform: uppercase;
+  font-size: fontsize(12);
+  padding: 3px 10px;
+  border-radius: 4px;
+
+  &:hover {
+    opacity: 1;
   }
 }
 
@@ -258,6 +295,34 @@ app-query-editor {
   margin: 10px;
   font-size: fontsize(13);
   opacity: .7;
+}
+
+.query-result__bottom-pane {
+  padding: 5px;
+  max-height: 60%;
+  display: flex;
+  flex-direction: column;
+}
+.query-result__bottom-pane__title-wrapper {
+  display: flex;
+}
+.query-result__bottom-pane__title {
+  text-transform: uppercase;
+  padding: 0 15px;
+  font-size: fontsize(13);
+  font-weight: 700;
+  cursor: pointer;
+
+  &--active {
+    color: var(--primary-color);
+  }
+}
+.query-result__bottom-pane__panels {
+  flex: 1;
+  min-height: 0;
+}
+.query-result__bottom-pane__panel {
+  height: 100%;
 }
 
 .variables-editor-container {

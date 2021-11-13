@@ -1,0 +1,90 @@
+<nz-modal
+  [nzVisible]="showEnvironmentManager"
+  (nzVisibleChange)="toggleDialogChange.next($event)"
+  [nzTitle]="modalTitle"
+  [nzContent]="modalContent"
+  [nzFooter]="modalFooter"
+  [nzWidth]="870"
+  (nzOnCancel)="toggleDialogChange.next($event)"
+>
+  <ng-template #modalTitle>
+    <div class="app-dialog-header">
+      <div class="app-dialog-title">{{ 'ENVIRONMENTS_MANAGER_TEXT' | translate }}</div>
+      {{ 'ENVIRONMENTS_SUB_TEXT' | translate }}
+    </div>
+  </ng-template>
+
+  <ng-template #modalContent>
+    <div class="app-dialog-body">
+      <div class="app-dialog-section">
+        <div class="environment-manager-wrapper">
+          <div class="environment-manager__list-wrapper">
+            <div class="environment-manager__list">
+              <div
+                class="environment-manager__list-item"
+                (click)="selectEnvironment('base')"
+                [ngClass]="{ 'environment-manager__list-item--selected': selectedEnvironmentId === 'base' }"
+              >{{ 'BASE_ENVIRONMENT_TEXT' | translate }}</div>
+            </div>
+            <div class="environment-manager__list">
+              <div class="environment-manager__list-title">{{ 'SUB_ENVIRONMENTS_HEADER' | translate }}</div>
+              <div class="environment-manager__list-inner"
+                sortablejs
+                [sortablejsOptions]="sortableOptions"
+              >
+                <ng-container *ngIf="environments?.subEnvironments?.length">
+                  <div
+                    class="environment-manager__list-item"
+                    *ngFor="let item of environments.subEnvironments; trackBy: trackById;"
+                    (click)="selectEnvironment(item.id)"
+                    (dblclick)="setFocusOnEnvironmentTitle()"
+                    [ngClass]="{ 'environment-manager__list-item--selected': selectedEnvironmentId === item.id }"
+                  >
+                    <app-icon name="more-vertical"></app-icon>
+                    {{ item.title }}
+                  </div>
+                </ng-container>
+              </div>
+            </div>
+            <div class="environment-manager__list-actions">
+              <button class="app-button full-width" (click)="addSubEnvironmentChange.next()">{{ 'ADD_SUB_ENVIRONMENT_BUTTON' | translate }}</button>
+            </div>
+          </div>
+          <div class="environment-manager__editor-wrapper">
+            <div class="environment-manager__editor-meta" *ngIf="selectedEnvironmentId !== 'base'">
+              <div class="environment-manager__editor-meta-input-wrapper">
+                <input
+                  #subEnvironmentTitle
+                  type="text"
+                  class="environment-manager__editor-meta-input"
+                  placeholder="{{ 'SUB_ENVIRONMENT_TITLE_PLACEHOLDER' | translate }}"
+                  [(ngModel)]="editorTitle"
+                  (ngModelChange)="onTitleChange($event)">
+              </div>
+              <div class="environment-manager__editor-meta-actions">
+                <button class="app-button icon-button active-destructive" (click)="onDeleteSubEnvironment()">
+                  <app-icon name="trash-2"></app-icon>
+                  {{ 'DELETE_TEXT' | translate }}
+                </button>
+              </div>
+            </div>
+            <ngx-codemirror
+              #editor
+              class="environments-editor-textarea"
+              [options]="jsonEditorConfig"
+              [(ngModel)]="editorContent"
+              (ngModelChange)="onEditorChange($event)"
+            ></ngx-codemirror>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-template>
+
+  <ng-template #modalFooter>
+    <div class="app-dialog-footer">
+      <div class="environment-manager__tips left">{{ 'ENVIRONMENT_VARIABLE_TIP' | translate }}</div>
+      <button track-id="save_environments" class="app-button active-primary right" (click)="toggleDialogChange.next(false);">{{ 'SAVE_BUTTON' | translate }}</button>
+    </div>
+  </ng-template>
+</nz-modal>

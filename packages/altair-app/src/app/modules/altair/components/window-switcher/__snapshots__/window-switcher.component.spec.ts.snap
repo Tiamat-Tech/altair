@@ -1,0 +1,27 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`WindowSwitcherComponent should render correctly 1`] = `
+<app-window-switcher>
+  <ul
+    class="window-switcher__list"
+    sortablejs=""
+  >
+    
+    
+    <li
+      class="window-switcher__item"
+    >
+        
+    </li>
+  </ul>
+  <context-menu>
+    
+    
+    
+    
+    
+    
+    
+  </context-menu>
+</app-window-switcher>
+`;
