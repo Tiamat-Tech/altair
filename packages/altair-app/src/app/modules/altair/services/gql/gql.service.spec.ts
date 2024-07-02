@@ -1,12 +1,12 @@
 import { TestBed, inject } from '@angular/core/testing';
 import { expect, jest } from '@jest/globals';
 
-import { HttpClient, HttpResponse, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 
 import { GqlService } from './gql.service';
 import { NotifyService } from '../notify/notify.service';
 import { Store } from '@ngrx/store';
-import { EMPTY, of } from 'rxjs';
+import { EMPTY, of, throwError } from 'rxjs';
 import { take } from 'rxjs/operators';
 import { IntrospectionQuery, buildClientSchema } from 'graphql';
 
@@ -16,11 +16,13 @@ import { RootState } from 'altair-graphql-core/build/types/state/state.interface
 import { Position } from '../../utils/editor/helpers';
 import { ElectronAppService } from '../electron-app/electron-app.service';
 import { MockProvider } from 'ng-mocks';
+import { GraphQLRequestHandler } from 'altair-graphql-core/build/request/types';
+import { PerWindowState } from 'altair-graphql-core/build/types/state/per-window.interfaces';
 
 let mockHttpClient: HttpClient;
 let mockNotifyService: NotifyService;
-let mockElectronAppService: ElectronAppService;
 let mockStore: Store<RootState>;
+let mockRequestHandler: GraphQLRequestHandler;
 
 describe('GqlService', () => {
   beforeEach(() => {
@@ -35,7 +37,11 @@ describe('GqlService', () => {
       error: anyFn(),
       info: anyFn(),
     } as NotifyService;
-    mockElectronAppService = mock();
+    mockRequestHandler = mock({
+      handle() {
+        return EMPTY;
+      },
+    });
     TestBed.configureTestingModule({
       providers: [
         GqlService,
@@ -134,6 +140,7 @@ describe('GqlService', () => {
           method: 'post',
           query: '{}',
           extensions: '{}',
+          additionalParams: '',
         });
         expect(mockHttpClient.request).toHaveBeenCalled();
         const httpClientArgs = (mockHttpClient.request as any).mock.calls[0];
@@ -167,6 +174,7 @@ describe('GqlService', () => {
               data: new File([], 'file2'),
             },
           ],
+          additionalParams: '',
         });
         expect(mockHttpClient.request).toHaveBeenCalled();
         const httpClientArgs = (mockHttpClient.request as any).mock.calls[0];
@@ -198,6 +206,7 @@ describe('GqlService', () => {
               name: 'file1',
             },
           ],
+          additionalParams: '',
         });
         expect(mockHttpClient.request).toHaveBeenCalled();
         const httpClientArgs = (mockHttpClient.request as any).mock.calls[0];
@@ -219,40 +228,56 @@ describe('GqlService', () => {
       [GqlService],
       async (service: GqlService) => {
         let httpClientCallCount = 0;
-        mockHttpClient.request = (...args: any) => {
+        mockRequestHandler.handle = (request) => {
           httpClientCallCount++;
-          const [method, url, options] = args;
-          expect(options.params.get('operationName')).toEqual('IntrospectionQuery');
+          expect(request.selectedOperation).toEqual('IntrospectionQuery');
           switch (httpClientCallCount) {
             case 1: {
-              const resp = new HttpResponse<any>({
-                body: {
+              return of({
+                ok: true,
+                data: JSON.stringify({
                   data: 'introspection data',
-                },
+                }),
+                headers: new Headers(),
+                status: 200,
+                statusText: 'OK',
+                url: 'http://test.com',
+                requestStartTimestamp: 1,
+                requestEndTimestamp: 2,
+                resopnseTimeMs: 1.5,
               });
-              return of(resp) as any;
             }
             default:
-              return of(
-                new HttpResponse<any>({
-                  body: {
-                    data: '',
-                  },
-                })
-              ) as any;
+              return of({
+                ok: true,
+                data: JSON.stringify({
+                  data: '',
+                }),
+                headers: new Headers(),
+                status: 200,
+                statusText: 'OK',
+                url: 'http://test.com',
+                requestStartTimestamp: 1,
+                requestEndTimestamp: 2,
+                resopnseTimeMs: 1.5,
+              });
           }
         };
         const res = await service
           .getIntrospectionRequest({
             url: 'http://test.com',
             method: 'GET',
+            additionalParams: '',
+            handler: mockRequestHandler,
           })
           .pipe(take(1))
           .toPromise();
 
-        expect(res.response.body).toEqual({
-          data: 'introspection data',
-        });
+        expect(res?.body).toEqual(
+          JSON.stringify({
+            data: 'introspection data',
+          }, null, 2)
+        );
       }
     ));
 
@@ -260,44 +285,58 @@ describe('GqlService', () => {
       [GqlService],
       async (service: GqlService) => {
         let httpClientCallCount = 0;
-        mockHttpClient.request = (...args: any) => {
+        mockRequestHandler.handle = jest.fn(() => {
           httpClientCallCount++;
           switch (httpClientCallCount) {
             case 1: {
-              const resp = new HttpErrorResponse({
-                error: 'Some network error',
-              });
-              return of(resp) as any;
+              return throwError(() => new Error('Some network error'));
             }
             case 2: {
-              const resp = new HttpResponse<any>({
-                body: {
+              return of({
+                ok: true,
+                data: JSON.stringify({
                   data: 'second introspection data',
-                },
+                }),
+                headers: new Headers(),
+                status: 200,
+                statusText: 'OK',
+                url: 'http://test.com',
+                requestStartTimestamp: 1,
+                requestEndTimestamp: 2,
+                resopnseTimeMs: 1.5,
               });
-              return of(resp) as any;
             }
             default:
-              return of(
-                new HttpResponse<any>({
-                  body: {
-                    data: '',
-                  },
-                })
-              ) as any;
+              return of({
+                ok: true,
+                data: JSON.stringify({
+                  data: '',
+                }),
+                headers: new Headers(),
+                status: 200,
+                statusText: 'OK',
+                url: 'http://test.com',
+                requestStartTimestamp: 1,
+                requestEndTimestamp: 2,
+                resopnseTimeMs: 1.5,
+              });
           }
-        };
+        });
         const res = await service
           .getIntrospectionRequest({
             url: 'http://test.com',
             method: 'GET',
+            additionalParams: '',
+            handler: mockRequestHandler,
           })
           .pipe(take(1))
           .toPromise();
 
-        expect(res.response.body).toEqual({
-          data: 'second introspection data',
-        });
+        expect(res?.body).toEqual(
+          JSON.stringify({
+            data: 'second introspection data',
+          }, null, 2)
+        );
       }
     ));
 
@@ -305,34 +344,34 @@ describe('GqlService', () => {
       [GqlService],
       async (service: GqlService) => {
         let httpClientCallCount = 0;
-        mockHttpClient.request = (...args: any) => {
+        mockRequestHandler.handle = () => {
           httpClientCallCount++;
           switch (httpClientCallCount) {
             case 1: {
-              const resp = new HttpErrorResponse({
-                error: 'Some network error',
-              });
-              return of(resp) as any;
+              return throwError(() => new Error('Some network error'));
             }
             case 2: {
-              const resp = new HttpErrorResponse({
-                error: 'Second network error',
-              });
-              return of(resp) as any;
+              return throwError(() => new Error('Second network error'));
             }
             default:
-              return of(
-                new HttpResponse<any>({
-                  body: {
-                    data: '',
-                  },
-                })
-              ) as any;
+              return of({
+                ok: true,
+                data: JSON.stringify({
+                  data: '',
+                }),
+                headers: new Headers(),
+                status: 200,
+                statusText: 'OK',
+                url: 'http://test.com',
+                requestStartTimestamp: 1,
+                requestEndTimestamp: 2,
+                resopnseTimeMs: 1.5,
+              });
           }
         };
 
         try {
-          const res = await service
+          await service
             .getIntrospectionRequest({
               url: 'http://test.com',
               method: 'GET',
@@ -730,7 +769,11 @@ describe('GqlService', () => {
       [GqlService],
       (service: GqlService) => {
         expect(
-          service.isSubscriptionQuery('subscription { get { id message } }')
+          service.isSubscriptionQuery('subscription { get { id message } }', {
+            query: {
+              queryEditorState: {},
+            },
+          } as unknown as PerWindowState)
         ).toBe(true);
       }
     ));
@@ -738,9 +781,11 @@ describe('GqlService', () => {
     it('should return false if query is not a subscription query', inject(
       [GqlService],
       (service: GqlService) => {
-        expect(service.isSubscriptionQuery('query { get { id message } }')).toBe(
-          false
-        );
+        expect(
+          service.isSubscriptionQuery('query { get { id message } }', {
+            query: {},
+          } as unknown as PerWindowState)
+        ).toBe(false);
       }
     ));
   });
@@ -858,7 +903,7 @@ describe('GqlService', () => {
   describe('.closeStreamClient()', () => {
     it('should close client', inject([GqlService], (service: GqlService) => {
       const client = new EventSource('http://example.com/stream');
-      const closeSpy = jest.spyOn(client, 'close');
+      jest.spyOn(client, 'close');
       service.closeStreamClient(client);
 
       expect(client.close).toHaveBeenCalled();

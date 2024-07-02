@@ -1,6 +1,7 @@
 import { OperationDefinitionNode } from 'graphql';
 import { SubscriptionProvider } from '../../subscriptions/subscription-provider';
 import { IDictionary } from '../shared';
+import { RequestHandlerIds } from '../../request/types';
 
 export interface QueryEditorState {
   isFocused: boolean;
@@ -8,10 +9,9 @@ export interface QueryEditorState {
   cursorIndex?: number;
 }
 
-export interface SubscriptionResponse {
-  response: string;
-  responseObj: unknown;
-  responseTime: number;
+export interface QueryResponse {
+  content: string;
+  timestamp: number;
 }
 
 export interface LogLine {
@@ -22,6 +22,14 @@ export interface LogLine {
 
 export type SelectedOperation = string | null;
 
+export interface RequestHandlerInfo {
+  requestHandlerId?: RequestHandlerIds;
+  additionalParams?: string;
+  subscriptionUseDefaultRequestHandler?: boolean;
+  subscriptionUrl?: string;
+  subscriptionConnectionParams?: string;
+  subscriptionRequestHandlerId?: RequestHandlerIds;
+}
 export interface QueryState {
   url: string;
   subscriptionUrl: string;
@@ -32,9 +40,12 @@ export interface QueryState {
   // Adding undefined for backward compatibility
   operations?: OperationDefinitionNode[];
   httpVerb: HttpVerb;
-  response?: string;
+  responses?: QueryResponse[];
   requestStartTime: number;
   requestEndTime: number;
+  requestHandlerId?: RequestHandlerIds;
+  requestHandlerAdditionalParams?: string;
+  subscriptionUseDefaultRequestHandler?: boolean;
   responseTime: number;
   responseStatus: number;
   responseStatusText: string;
@@ -45,12 +56,15 @@ export interface QueryState {
   showEditorAlert: boolean;
   editorAlertMessage: string;
   editorAlertSuccess: boolean;
-  subscriptionClient?: SubscriptionProvider;
   subscriptionConnectionParams: string;
+
+  /**
+   * @deprecated Use {@link subscriptionRequestHandlerId} instead. Will be removed in future versions.
+   */
   subscriptionProviderId?: string;
+  subscriptionRequestHandlerId?: RequestHandlerIds;
   isSubscribed: boolean;
-  subscriptionResponseList: SubscriptionResponse[];
-  autoscrollSubscriptionResponse: boolean;
+  autoscrollResponseList: boolean;
   requestScriptLogs?: LogLine[];
   requestExtensions?: string;
 

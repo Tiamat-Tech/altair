@@ -4,4 +4,9 @@ module.exports = {
   testRegex: '.*\\.spec\\.ts$',
   testEnvironment: 'jsdom',
   setupFiles: ['<rootDir>/jest.setup.js'],
+  testEnvironmentOptions: {
+    customExportConditions: [''],
+  },
+  coverageDirectory: '<rootDir>/.coverage',
+  collectCoverage: true,
 };

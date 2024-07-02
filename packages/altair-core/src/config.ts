@@ -1,4 +1,8 @@
-import { SubscriptionProviderIds, WEBSOCKET_PROVIDER_ID } from './subscriptions';
+import {
+  HTTP_HANDLER_ID,
+  RequestHandlerIds,
+  WEBSOCKET_HANDLER_ID,
+} from './request/types';
 import { IDictionary, TODO } from './types/shared';
 import { IInitialEnvironments } from './types/state/environments.interfaces';
 import { HttpVerb } from './types/state/query.interfaces';
@@ -63,12 +67,24 @@ export interface AltairWindowOptions {
    *
    * @default "websocket"
    */
-  initialSubscriptionsProvider?: SubscriptionProviderIds;
+  initialSubscriptionRequestHandlerId?: RequestHandlerIds;
 
   /**
    * Initial subscriptions connection params
    */
   initialSubscriptionsPayload?: IDictionary;
+
+  /**
+   * Initial request handler id
+   *
+   * @default "http"
+   */
+  initialRequestHandlerId?: RequestHandlerIds;
+
+  /**
+   * Additional params to be passed to the request handler
+   */
+  initialRequestHandlerAdditionalParams?: Record<string, unknown>;
 
   /**
    * HTTP method to use for making requests
@@ -180,9 +196,11 @@ export class AltairConfig {
     settings: undefined as unknown as AltairConfigOptions['initialSettings'],
     persistedSettings:
       undefined as unknown as AltairConfigOptions['persistedSettings'],
-    initialSubscriptionsProvider:
-      undefined as AltairConfigOptions['initialSubscriptionsProvider'],
+    initialSubscriptionRequestHandlerId:
+      undefined as AltairConfigOptions['initialSubscriptionRequestHandlerId'],
     initialSubscriptionsPayload: {} as IDictionary,
+    initialRequestHandlerId: HTTP_HANDLER_ID as RequestHandlerIds,
+    initialRequestHandlerAdditionalParams: {} as Record<string, unknown>,
     initialHttpMethod: 'POST' as HttpVerb,
     preserveState: true,
     windows: [] as AltairWindowOptions[],
@@ -201,7 +219,9 @@ export class AltairConfig {
     instanceStorageNamespace,
     initialSettings,
     persistedSettings,
-    initialSubscriptionsProvider = WEBSOCKET_PROVIDER_ID,
+    initialRequestHandlerId = HTTP_HANDLER_ID,
+    initialRequestHandlerAdditionalParams = {},
+    initialSubscriptionRequestHandlerId = WEBSOCKET_HANDLER_ID,
     initialSubscriptionsPayload = {},
     initialHttpMethod = 'POST',
     preserveState = true,
@@ -233,8 +253,12 @@ export class AltairConfig {
       'altair_';
     this.initialData.settings = initialSettings;
     this.initialData.persistedSettings = persistedSettings;
-    this.initialData.initialSubscriptionsProvider = initialSubscriptionsProvider;
+    this.initialData.initialSubscriptionRequestHandlerId =
+      initialSubscriptionRequestHandlerId;
     this.initialData.initialSubscriptionsPayload = initialSubscriptionsPayload;
+    this.initialData.initialRequestHandlerId = initialRequestHandlerId;
+    this.initialData.initialRequestHandlerAdditionalParams =
+      initialRequestHandlerAdditionalParams;
     this.initialData.initialHttpMethod = initialHttpMethod;
     this.initialData.preserveState = preserveState;
     this.initialData.windows = initialWindows;

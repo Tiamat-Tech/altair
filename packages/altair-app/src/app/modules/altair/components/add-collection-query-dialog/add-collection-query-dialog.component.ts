@@ -36,7 +36,7 @@ export class AddCollectionQueryDialogComponent implements OnChanges {
   @Output() newCollectionParentCollectionIdChange = new EventEmitter();
 
   get parentCollectionRootId() {
-    return 0; // 0 for root
+    return '0'; // 0 for root
   }
   newCollectionQueryTitle = this.windowTitle;
   newCollectionTitle = '';
@@ -60,7 +60,7 @@ export class AddCollectionQueryDialogComponent implements OnChanges {
     this.createCollectionAndSaveQueryToCollectionChange.emit({
       queryName: this.newCollectionQueryTitle,
       collectionName: this.newCollectionTitle,
-      parentCollectionId: this.newCollectionParentCollectionId,
+      parentCollectionId: this.newCollectionParentCollectionId === '0' ? '' : this.newCollectionParentCollectionId,
       workspaceId: this.workspaceId,
     });
 
@@ -100,8 +100,7 @@ export class AddCollectionQueryDialogComponent implements OnChanges {
   }
 
   setTreeNodes(collections: IQueryCollection[]) {
-    const collectionTree =
-      this.collectionService.getCollectionTrees(collections);
+    const collectionTree = this.collectionService.getCollectionTrees(collections);
     this.collectionNodes = collectionTree.map((tree) =>
       this.collectionTreeToNzTreeNode(tree)
     );

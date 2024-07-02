@@ -48,14 +48,14 @@
                   {{ 'DOCS_EXPORT_SDL' | translate }}
                 </li>
               }
-              <li nz-menu-item (click)="loadSchemaChange.next()">
+              <li nz-menu-item (click)="loadSchemaChange.emit()">
                 {{ 'DOCS_LOAD_SCHEMA' | translate }}...
               </li>
             </ul>
           </nz-dropdown-menu>
           <div
             class="doc-viewer-navigation__option"
-            (click)="toggleDocsChange.next()"
+            (click)="toggleDocsChange.emit()"
           >
             <app-icon name="x"></app-icon>
           </div>
@@ -115,6 +115,7 @@
                   [data]="gqlSchema.getType(docView.name)"
                   [gqlSchema]="gqlSchema"
                   [sortByOption]="sortFieldsByOption"
+                  [hideDeprecatedDocItems]="hideDeprecatedDocItems"
                   (goToFieldChange)="goToField($event.name, $event.parentType)"
                   (goToTypeChange)="goToType($event.name)"
                   (addToEditorChange)="addToEditor($event.name, $event.parentType)"
@@ -123,12 +124,13 @@
               }
             }
             @case ('field') {
-              @if (docView.view === 'field') {
+              @if (!(hideDeprecatedDocItems && getField(docView)?.isDeprecated) && docView.view === 'field') {
                 <app-doc-viewer-field
                   [data]="getField(docView)"
                   [gqlSchema]="gqlSchema"
                   [parentType]="docView.parentType"
                   [sortByOption]="sortFieldsByOption"
+                  [hideDeprecatedDocItems]="hideDeprecatedDocItems"
                   (goToFieldChange)="goToField($event.name, $event.parentType)"
                   (goToTypeChange)="goToType($event.name)"
                   (addToEditorChange)="addToEditor($event.name, $event.parentType)"

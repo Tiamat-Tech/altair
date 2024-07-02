@@ -1,6 +1,6 @@
-import { throwError as observableThrowError, Observable, of } from 'rxjs';
+import { throwError as observableThrowError, Observable, of, throwError } from 'rxjs';
 
-import { map, catchError } from 'rxjs/operators';
+import { map, catchError, switchMap, toArray } from 'rxjs/operators';
 import {
   HttpHeaders,
   HttpClient,
@@ -52,6 +52,10 @@ import { Position } from '../../utils/editor/helpers';
 import { ElectronAppService } from '../electron-app/electron-app.service';
 import { ELECTRON_ALLOWED_FORBIDDEN_HEADERS } from '@altairgraphql/electron-interop/build/constants';
 import { SendRequestResponse } from 'altair-graphql-core/build/script/types';
+import { HttpRequestHandler } from 'altair-graphql-core/build/request/handlers/http';
+import { GraphQLRequestHandler, MultiResponseStrategy } from 'altair-graphql-core/build/request/types';
+import { PerWindowState } from 'altair-graphql-core/build/types/state/per-window.interfaces';
+import { buildResponse } from 'altair-graphql-core/build/request/response-builder';
 
 interface SendRequestOptions {
   url: string;
@@ -63,7 +67,9 @@ interface SendRequestOptions {
   headers?: HeaderState;
   files?: FileVariable[];
   selectedOperation?: SelectedOperation;
+  additionalParams?: string;
   batchedRequest?: boolean;
+  handler?: GraphQLRequestHandler;
 }
 
 export const BATCHED_REQUESTS_OPERATION = 'BatchedRequests';
@@ -100,6 +106,9 @@ export class GqlService {
     this.setHeaders();
   }
 
+  /**
+   * @deprecated use {@link sendRequestV2} instead
+   */
   sendRequest(opts: SendRequestOptions): Observable<SendRequestResponse> {
     // Only need resolvedFiles to know if valid files exist at this point
     const { resolvedFiles } = this.normalizeFiles(opts.files);
@@ -116,18 +125,20 @@ export class GqlService {
         const requestElapsedTime = requestEndTime - requestStartTime;
 
         return {
-          response,
-          meta: {
-            requestStartTime,
-            requestEndTime,
-            responseTime: requestElapsedTime,
-            headers: response.headers
-              .keys()
-              .reduce(
-                (acc, key) => ({ ...acc, [key]: response.headers.get(key) }),
-                {}
-              ),
-          },
+          ok: response.ok,
+          body: response.body,
+          status: response.status,
+          statusText: response.statusText,
+          url: response.url ?? '',
+          requestStartTime,
+          requestEndTime,
+          responseTime: requestElapsedTime,
+          headers: response.headers
+            .keys()
+            .reduce(
+              (acc, key) => ({ ...acc, [key]: response.headers.get(key) }),
+              {}
+            ),
         };
       })
     );
@@ -175,6 +186,31 @@ export class GqlService {
   }
 
   getIntrospectionRequest(opts: IntrospectionRequestOptions) {
+    return this._getIntrospectionRequest(opts).pipe(
+      toArray(),
+      switchMap((resps) => {
+        const lastResponse = resps.at(-1);
+
+        if (!lastResponse) {
+          return throwError(() => new Error('No response!'));
+        }
+
+        // concatenate the responses to get the full introspection data
+        const builtResponse = buildResponse(
+          resps.map(r => ({
+            content: r.body,
+            timestamp: r.requestEndTime
+          })),
+          MultiResponseStrategy.CONCATENATE
+        );
+
+        lastResponse.body = builtResponse[0]?.content ?? '';
+        return of(lastResponse)
+      }),
+    )
+  }
+
+  private _getIntrospectionRequest(opts: IntrospectionRequestOptions) {
     const requestOpts: SendRequestOptions = {
       url: opts.url,
       query: getIntrospectionQuery(),
@@ -184,14 +220,14 @@ export class GqlService {
       variables: opts.variables,
       extensions: opts.extensions,
       selectedOperation: 'IntrospectionQuery',
+      additionalParams: opts.additionalParams,
+      handler: opts.handler,
     };
-    return this.sendRequest(requestOpts).pipe(
+    return this.sendRequestV2(requestOpts).pipe(
       map((data) => {
-        debug.log('introspection', data.response);
-        if (!data.response.ok) {
-          throw new Error(
-            `Introspection request failed with: ${data.response.status}`
-          );
+        debug.log('introspection', data.body);
+        if (!data.ok) {
+          throw new Error(`Introspection request failed with: ${data.status}`);
         }
         return data;
       }),
@@ -199,16 +235,14 @@ export class GqlService {
         debug.log('Error from first introspection query.', err);
 
         // Try the old introspection query
-        return this.sendRequest({
+        return this.sendRequestV2({
           ...requestOpts,
           query: oldIntrospectionQuery,
         }).pipe(
           map((data) => {
             debug.log('old introspection', data);
-            if (!data.response.ok) {
-              throw new Error(
-                `Introspection request failed with: ${data.response.status}`
-              );
+            if (!data.ok) {
+              throw new Error(`Introspection request failed with: ${data.status}`);
             }
             return data;
           })
@@ -305,13 +339,20 @@ export class GqlService {
    * Checks if a query contains a subscription operation
    * @param query
    */
-  isSubscriptionQuery(query: string) {
-    const parsedQuery = this.parseQueryOrEmptyDocument(query);
-
-    if (!parsedQuery.definitions) {
-      return false;
+  isSubscriptionQuery(query: string, state: PerWindowState) {
+    const { operations, selectedOperation } = this.calculateSelectedOperation(
+      state,
+      query
+    );
+    if (operations?.length && selectedOperation) {
+      return operations.some((operation) => {
+        return (
+          operation.name?.value === selectedOperation &&
+          operation.operation === 'subscription'
+        );
+      });
     }
-
+    const parsedQuery = this.parseQueryOrEmptyDocument(query);
     return parsedQuery.definitions.reduce((acc, cur) => {
       return (
         acc ||
@@ -417,6 +458,37 @@ export class GqlService {
       operations,
       requestSelectedOperationFromUser,
     };
+  }
+
+  calculateSelectedOperation(state: PerWindowState, query: string) {
+    try {
+      const queryEditorIsFocused = state.query.queryEditorState?.isFocused;
+      const operationData = this.getSelectedOperationData({
+        query,
+        selectedOperation: state.query.selectedOperation,
+        selectIfOneOperation: true,
+        queryCursorIndex: queryEditorIsFocused
+          ? state.query.queryEditorState.cursorIndex
+          : undefined,
+      });
+      if (operationData.requestSelectedOperationFromUser) {
+        return {
+          selectedOperation: '',
+          operations: operationData.operations,
+          error: `You have more than one query operations. You need to select the one you want to run from the dropdown.`,
+        };
+      }
+      return {
+        selectedOperation: operationData.selectedOperation,
+        operations: operationData.operations,
+      };
+    } catch (err) {
+      debug.error(err);
+      return {
+        selectedOperation: '',
+        error: 'Could not select operation',
+      };
+    }
   }
 
   /**
@@ -742,5 +814,102 @@ export class GqlService {
           return observableThrowError(err);
         })
       );
+  }
+
+  sendRequestV2({
+    url,
+    method,
+    query,
+    variables,
+    headers,
+    extensions,
+    selectedOperation,
+    files,
+    withCredentials,
+    batchedRequest,
+    additionalParams,
+    handler = new HttpRequestHandler(),
+  }: SendRequestOptions): Observable<SendRequestResponse> {
+    // wrapping the logic to properly handle any errors (both within and outside the observable)
+    return of(undefined).pipe(
+      switchMap(() => {
+        const { resolvedFiles } = this.normalizeFiles(files);
+
+        if (headers?.length) {
+          // For electron app, send the instruction to set headers
+          this.electronAppService.setHeaders(headers);
+
+          // Filter out headers that are not allowed
+          headers = headers.filter((header) => {
+            return (
+              !ELECTRON_ALLOWED_FORBIDDEN_HEADERS.includes(
+                header.key.toLowerCase()
+              ) &&
+              header.enabled &&
+              header.key &&
+              header.value
+            );
+          });
+        }
+
+        // valiate variables
+        if (variables) {
+          try {
+            JSON.parse(variables);
+          } catch (err) {
+            throw new Error('Variables is not valid JSON');
+          }
+        }
+
+        // validate extensions
+        if (extensions) {
+          try {
+            JSON.parse(extensions);
+          } catch (err) {
+            throw new Error('Request extensions is not valid JSON');
+          }
+        }
+
+        return handler
+          .handle({
+            url,
+            method,
+            query,
+            variables: variables ? parseJson(variables, {}) : undefined,
+            headers,
+            extensions: extensions ? parseJson(extensions, {}) : undefined,
+            selectedOperation,
+            files: resolvedFiles,
+            withCredentials,
+            batchedRequest,
+            additionalParams: additionalParams
+              ? parseJson(additionalParams, {})
+              : undefined,
+          })
+          .pipe(
+            map((response) => {
+              return {
+                ok: response.ok,
+                body: response.data,
+                headers: Object.fromEntries(response.headers),
+                status: response.status,
+                statusText: response.statusText,
+                url: response.url,
+                requestStartTime: response.requestStartTimestamp,
+                requestEndTime: response.requestEndTimestamp,
+                responseTime: response.resopnseTimeMs,
+              };
+            })
+          );
+      }),
+
+      catchError((err) => {
+        if (err instanceof Error) {
+          this.notifyService.error(err.message);
+        }
+        debug.error(err);
+        throw err;
+      })
+    );
   }
 }

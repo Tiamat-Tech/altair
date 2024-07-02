@@ -33,6 +33,7 @@ import { debounce } from 'lodash-es';
 export class DocViewerComponent implements OnChanges {
   @Input() gqlSchema?: GraphQLSchema;
   @Input() allowIntrospection = true;
+  @Input() hideDeprecatedDocItems = false;
   @Input() isLoading = false;
   @Input() addQueryDepthLimit = this.altairConfig.add_query_depth_limit;
   @Input() tabSize = this.altairConfig.tab_size;
@@ -105,13 +106,10 @@ export class DocViewerComponent implements OnChanges {
     const docUtils = await this.getDocUtilsWorker();
     this.autocompleteOptions = await docUtils.searchDocs(term);
   }
-  debouncedFilterAutocompleteOptions = debounce(
-    this.filterAutocompleteOptions,
-    300
-  );
+  debouncedFilterAutocompleteOptions = debounce(this.filterAutocompleteOptions, 300);
 
   setDocView(docView?: DocView) {
-    this.setDocViewChange.next(docView);
+    this.setDocViewChange.emit(docView);
     if (this.docViewerRef) {
       this.docViewerRef.nativeElement.scrollTop = 0;
     }
@@ -198,14 +196,10 @@ export class DocViewerComponent implements OnChanges {
       return false;
     }
     const docUtilsWorker = await this.getDocUtilsWorker();
-    const generatedQuery = await docUtilsWorker.generateQueryV2(
-      name,
-      parentType,
-      {
-        tabSize: this.tabSize,
-        addQueryDepthLimit: this.addQueryDepthLimit,
-      }
-    );
+    const generatedQuery = await docUtilsWorker.generateQueryV2(name, parentType, {
+      tabSize: this.tabSize,
+      addQueryDepthLimit: this.addQueryDepthLimit,
+    });
     if (generatedQuery) {
       this.addQueryToEditorChange.next(generatedQuery);
     }
@@ -224,7 +218,7 @@ export class DocViewerComponent implements OnChanges {
   }
 
   exportSDL() {
-    this.exportSDLChange.next();
+    this.exportSDLChange.emit();
   }
 
   async getDocUtilsWorker() {

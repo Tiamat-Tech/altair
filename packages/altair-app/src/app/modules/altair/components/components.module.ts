@@ -15,8 +15,6 @@ import { UrlBoxComponent } from './url-box/url-box.component';
 import { SetVariableDialogComponent } from './set-variable-dialog/set-variable-dialog.component';
 import { ForkRepoComponent } from './fork-repo/fork-repo.component';
 import { WindowSwitcherComponent } from './window-switcher/window-switcher.component';
-import { SubscriptionUrlDialogComponent } from './subscription-url-dialog/subscription-url-dialog.component';
-import { SubscriptionResultItemComponent } from './subscription-result-item/subscription-result-item.component';
 import { HistoryDialogComponent } from './history-dialog/history-dialog.component';
 import { SettingsDialogComponent } from './settings-dialog/settings-dialog.component';
 import { ImportCurlDialogComponent } from './import-curl-dialog/import-curl-dialog.component';
@@ -41,7 +39,6 @@ import { CodemirrorComponent } from './codemirror/codemirror.component';
 import { ConfirmToastComponent } from './confirm-toast/confirm-toast.component';
 import { XInputComponent } from './x-input/x-input.component';
 import { BetaIndicatorComponent } from './beta-indicator/beta-indicator.component';
-import { LoaderComponent } from './loader/loader.component';
 import { TagComponent } from './tag/tag.component';
 import { TeamsDialogComponent } from './teams-dialog/teams-dialog.component';
 import { UpgradeDialogComponent } from './upgrade-dialog/upgrade-dialog.component';
@@ -52,6 +49,8 @@ import { AuthorizationBasicComponent } from './authorization/authorization-basic
 import { AuthorizationApikeyComponent } from './authorization/authorization-apikey/authorization-apikey.component';
 import { AuthorizationOauth2Component } from './authorization/authorization-oauth2/authorization-oauth2.component';
 import { RequestExtensionsDialogComponent } from './request-extensions-dialog/request-extensions-dialog.component';
+import { RequestHandlerDialogComponent } from './request-handler-dialog/request-handler-dialog.component';
+import { TipsComponent } from './tips/tips.component';
 
 // const STANDALONE_COMPONENTS = [];
 const COMPONENTS = [
@@ -62,8 +61,6 @@ const COMPONENTS = [
   SetVariableDialogComponent,
   ForkRepoComponent,
   WindowSwitcherComponent,
-  SubscriptionUrlDialogComponent,
-  SubscriptionResultItemComponent,
   UrlBoxComponent,
   HistoryDialogComponent,
   SettingsDialogComponent,
@@ -88,12 +85,13 @@ const COMPONENTS = [
   ConfirmToastComponent,
   XInputComponent,
   BetaIndicatorComponent,
-  LoaderComponent,
   TagComponent,
   TeamsDialogComponent,
   QueryRevisionDialogComponent,
   UpgradeDialogComponent,
   RequestExtensionsDialogComponent,
+  RequestHandlerDialogComponent,
+  TipsComponent,
   AuthorizationEditorComponent,
   AuthorizationApikeyComponent,
   AuthorizationBearerComponent,

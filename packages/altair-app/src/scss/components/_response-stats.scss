@@ -1,21 +1,3 @@
-.response-stats {
-  // position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  padding: 10px;
-  font-size: fontsize(12);
-  color: var(--theme-font-color);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.response-stats__section {
-  display: flex;
-  gap: 5px;
-}
-
 .response-stats__item {
   display: inline-flex;
   align-items: center;
@@ -23,6 +5,8 @@
   gap: 4px;
   padding: 2px 5px;
   border-radius: 3px;
+  height: fit-content;
+  font-size: fontsize(12);
 
   &[data-status-code^='1'] {
     // background: var(--orange-color);

@@ -2,7 +2,11 @@
 parent: Features
 ---
 
-# GraphQL Subscriptions (with desktop notifications)
+# GraphQL Subscriptions
+
+::: warning 💡 Deprecation notice
+Choosing the subscription implementation to use has been replaced with a more general [request handlers](/docs/features/request-handlers) feature in v7.2.0. This allows you to choose the request handler to use for your queries, mutations and subscriptions. All the subscription implementations below are still available as request handlers but are no longer limited to subscriptions only.
+:::
 
 You can test your GraphQL subscriptions easily and also get a notification when you are away from the
 app (desktop apps only). This is very handy when developing apps that use the realtime feature of
@@ -15,6 +19,7 @@ Altair supports a number of subscription implementations:
 This supports both the the original [subscriptions-transport-ws protocol](https://github.com/apollographql/subscriptions-transport-ws/blob/master/PROTOCOL.md) as well as the new [graphql-ws protocol](https://github.com/enisdenjo/graphql-ws/blob/master/PROTOCOL.md), which are the more common specifications used for GraphQL subscriptions.
 
 ### SSE
+
 There is support for using [GraphQL subscriptions over SSE](https://github.com/enisdenjo/graphql-sse).
 
 ### AWS AppSync

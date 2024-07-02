@@ -10,13 +10,13 @@ import * as windowsMetaReducer from '../../../store/windows-meta/windows-meta.re
 import { WindowService } from '../../../services/window.service';
 import { PluginEventService } from '../plugin-event.service';
 import { NotifyService } from '../../../services/notify/notify.service';
-import { SubscriptionProviderRegistryService } from '../../subscriptions/subscription-provider-registry.service';
 import { RootState } from 'altair-graphql-core/build/types/state/state.interfaces';
-import { AltairPlugin } from 'altair-graphql-core/build/plugin/plugin.interfaces';
+import { AltairV1Plugin } from 'altair-graphql-core/build/plugin/plugin.interfaces';
+import { RequestHandlerRegistryService } from '../../request/request-handler-registry.service';
 
 const createContext = () => {
   const service: PluginContextService = TestBed.inject(PluginContextService);
-  const testPlugin: AltairPlugin = {
+  const testPlugin: AltairV1Plugin = {
     name: 'Test',
     display_name: 'Test plugin',
     capabilities: [],
@@ -29,7 +29,7 @@ const createContext = () => {
       version: '0.0.1',
     },
   };
-  return service.createContext('test-plugin', testPlugin);
+  return service.createV1Context('test-plugin', testPlugin);
 };
 
 describe('PluginContextService', () => {
@@ -65,11 +65,11 @@ describe('PluginContextService', () => {
           provide: PluginEventService,
           useFactory: () =>
             mock<PluginEventService>({
-              group: () => ({} as unknown as any),
+              group: () => ({}) as unknown as any,
             }),
         },
         {
-          provide: SubscriptionProviderRegistryService,
+          provide: RequestHandlerRegistryService,
           useFactory: () => mock(),
         },
       ],
