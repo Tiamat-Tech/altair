@@ -1,6 +1,11 @@
 import { EvaluatorWorker, EventData } from '../../evaluator/worker';
 import { urlWithParams } from '../../utils/url';
 import { FrameOptions, InstanceType, instanceTypes } from './frame-worker';
+import {
+  PLUGIN_SANDBOX_BOOTSTRAP_READY,
+  PLUGIN_SANDBOX_INITIALIZE,
+  PLUGIN_SANDBOX_INITIALIZED,
+} from './events';
 
 interface BasePluginParentWorkerOptions {
   id: string;
@@ -25,19 +30,35 @@ interface PluginParentWorkerOptionsWithUrl extends BasePluginParentWorkerOptions
 export type PluginParentWorkerOptions =
   | PluginParentWorkerOptionsWithScripts
   | PluginParentWorkerOptionsWithUrl;
+
+export interface PluginSandboxInitialization {
+  params: FrameOptions;
+  scriptUrls: string[];
+  styleUrls: string[];
+}
+
 export class PluginParentWorker extends EvaluatorWorker {
   private messageListeners: Array<(e: MessageEvent<any>) => void> = [];
+  private iframe: HTMLIFrameElement;
+  private frameReadyPromise: Promise<void>;
+
   constructor(private opts: PluginParentWorkerOptions) {
     super();
+    this.iframe = this.createIframe();
+    if (this.opts.type === 'scripts') {
+      this.frameReadyPromise = this.initializeScriptSandbox(this.opts);
+    } else {
+      this.frameReadyPromise = new Promise<void>((resolve) => {
+        this.iframe.addEventListener('load', () => {
+          resolve();
+        });
+      });
+    }
+
+    if (!this.opts.disableAppend) {
+      document.body.appendChild(this.iframe);
+    }
   }
-
-  private iframe = this.createIframe();
-
-  private frameReadyPromise = new Promise<void>((resolve) => {
-    this.iframe.addEventListener('load', () => {
-      resolve();
-    });
-  });
 
   private createIframe() {
     const iframe = document.createElement('iframe');
@@ -71,21 +92,56 @@ export class PluginParentWorker extends EvaluatorWorker {
     iframe.referrerPolicy = 'no-referrer';
 
     if (this.opts.type === 'scripts') {
-      const url = urlWithParams(this.opts.sandboxUrl, {
-        ...params,
+      iframe.src = urlWithParams(this.opts.sandboxUrl, {
         sandbox_type: 'plugin',
-        plugin_sandbox_opts: JSON.stringify(this.opts),
       });
-      iframe.src = url;
     } else if (this.opts.type === 'url') {
       const url = urlWithParams(this.opts.pluginEntrypointUrl, params);
       iframe.src = url;
     }
 
-    if (!this.opts.disableAppend) {
-      document.body.appendChild(iframe);
-    }
     return iframe;
+  }
+
+  private initializeScriptSandbox(
+    opts: PluginParentWorkerOptionsWithScripts
+  ) {
+    return new Promise<void>((resolve) => {
+      const listener = (e: MessageEvent<any>) => {
+        if (e.origin !== 'null' || e.source !== this.iframe.contentWindow) {
+          return;
+        }
+
+        if (e.data?.type === PLUGIN_SANDBOX_BOOTSTRAP_READY) {
+          const params: FrameOptions = {
+            ...opts.additionalParams,
+            sc: window.location.origin,
+            id: opts.id,
+            instanceType: this.getInstanceType(),
+          };
+          const initialization: PluginSandboxInitialization = {
+            params,
+            scriptUrls: opts.scriptUrls,
+            styleUrls: opts.styleUrls,
+          };
+          this.iframe.contentWindow?.postMessage(
+            { type: PLUGIN_SANDBOX_INITIALIZE, payload: initialization },
+            '*'
+          );
+          return;
+        }
+
+        if (
+          e.data?.type === PLUGIN_SANDBOX_INITIALIZED &&
+          e.data.frameId === opts.id
+        ) {
+          window.removeEventListener('message', listener);
+          resolve();
+        }
+      };
+      window.addEventListener('message', listener, false);
+      this.messageListeners.push(listener);
+    });
   }
 
   private async frameReady() {
