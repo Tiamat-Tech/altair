@@ -4,6 +4,7 @@ import {
   RenderOptions,
   renderInitSnippet,
   isSandboxFrame,
+  SANDBOX_FRAME_CSP,
 } from 'altair-static';
 import fp from 'fastify-plugin';
 import fastifyStatic from '@fastify/static';
@@ -36,8 +37,7 @@ const fastifyAltairPluginFn = async (
     prefix: renderOptions.baseURL ?? '/altair/',
     setHeaders: (res, path) => {
       if (isSandboxFrame(path)) {
-        // Disable CSP for the sandbox iframe
-        res.setHeader('Content-Security-Policy', '');
+        res.setHeader('Content-Security-Policy', SANDBOX_FRAME_CSP);
       }
     },
   });

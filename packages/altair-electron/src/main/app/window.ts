@@ -10,6 +10,7 @@ import {
   getDistDirectory,
   renderAltair,
   renderInitSnippet,
+  SANDBOX_FRAME_CSP,
 } from 'altair-static';
 import type { IdentityProvider } from 'altair-graphql-core/build/cjs/identity/providers';
 
@@ -306,9 +307,13 @@ export class WindowManager {
           return callback({ responseHeaders: details.responseHeaders });
         }
 
-        // Allow iframe-sandbox to load without CSP
         if (u.pathname.includes('/iframe-sandbox')) {
-          return callback({ responseHeaders: details.responseHeaders });
+          return callback({
+            responseHeaders: {
+              ...details.responseHeaders,
+              'Content-Security-Policy': [SANDBOX_FRAME_CSP],
+            },
+          });
         }
       } catch {
         // Do nothing

@@ -127,8 +127,10 @@ const getRenderedAltairOpts = (renderOptions: RenderOptions, indent = 0) => {
 };
 
 export const isSandboxFrame = (path: string) => {
-  return path.split('/').includes('iframe-sandbox');
+  return path.split(/[\\/]/).includes('iframe-sandbox');
 };
+
+export const SANDBOX_FRAME_CSP = 'sandbox allow-scripts';
 
 export { getDistDirectory } from './get-dist';
 export { getAltairHtml };

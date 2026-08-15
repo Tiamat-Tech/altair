@@ -7,6 +7,7 @@ import {
   renderInitSnippet,
   RenderOptions,
   isSandboxFrame,
+  SANDBOX_FRAME_CSP,
 } from 'altair-static';
 
 export type ExpressRenderOptions = RenderOptions & {
@@ -40,8 +41,7 @@ export const altairExpress = (opts: ExpressRenderOptions): express.Express => {
     express.static(getDistDirectory(), {
       setHeaders: (res, path) => {
         if (isSandboxFrame(path)) {
-          // Disable CSP for the sandbox iframe
-          res.setHeader('Content-Security-Policy', '');
+          res.setHeader('Content-Security-Policy', SANDBOX_FRAME_CSP);
         }
       },
     })

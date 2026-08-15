@@ -8,6 +8,7 @@ import {
   renderAltair,
   RenderOptions,
   isSandboxFrame,
+  SANDBOX_FRAME_CSP,
 } from 'altair-static';
 
 export interface AltairKoaMiddlewareOptions {
@@ -46,9 +47,8 @@ export const createRouteExplorer = ({
 
   router.get(`${url}/*path`, async (ctx) => {
     const path = ctx.params.path;
-    // Disable CSP for the sandbox iframe
     if (path && isSandboxFrame(path)) {
-      ctx.set('Content-Security-Policy', '');
+      ctx.set('Content-Security-Policy', SANDBOX_FRAME_CSP);
     }
     await send(ctx, path || '', { root: getDistDirectory() });
   });
