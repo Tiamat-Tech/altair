@@ -7,6 +7,7 @@ import {
 } from 'altair-graphql-core/build/identity/providers';
 
 const OAUTH_NONCE_KEY = 'altairgql:oauth:nonce:key';
+const OAUTH_CODE_VERIFIER_KEY = 'altairgql:oauth:code:verifier:key';
 
 const getNonce = () => {
   const params = new URLSearchParams(window.location.search);
@@ -15,6 +16,7 @@ const getNonce = () => {
 
 const cleanup = () => {
   sessionStorage.removeItem(OAUTH_NONCE_KEY);
+  sessionStorage.removeItem(OAUTH_CODE_VERIFIER_KEY);
 };
 
 const checkNonce = (nonce?: string | null) => {
@@ -23,6 +25,33 @@ const checkNonce = (nonce?: string | null) => {
     return false;
   }
   return previous === nonce;
+};
+
+const getCodeVerifier = () => {
+  let codeVerifier = sessionStorage.getItem(OAUTH_CODE_VERIFIER_KEY);
+  if (codeVerifier) {
+    return codeVerifier;
+  }
+
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  const generatedVerifier = btoa(String.fromCharCode(...bytes))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
+  sessionStorage.setItem(OAUTH_CODE_VERIFIER_KEY, generatedVerifier);
+  return generatedVerifier;
+};
+
+const getCodeChallenge = async (codeVerifier: string) => {
+  const digest = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(codeVerifier)
+  );
+  return btoa(String.fromCharCode(...new Uint8Array(digest)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
 };
 
 const sendToken = async (token: string) => {
@@ -58,13 +87,13 @@ const sendToken = async (token: string) => {
 
 const getRedirectResult = () => {
   const params = new URLSearchParams(location.search);
-  const accessToken = params.get('access_token');
-  if (!accessToken) {
+  const handoffCode = params.get('handoff_code');
+  if (!handoffCode) {
     return;
   }
 
   return {
-    accessToken,
+    handoffCode,
   };
 };
 
@@ -73,12 +102,44 @@ const getProvider = () => {
   return (params.get('provider') as IdentityProvider) || IDENTITY_PROVIDERS.GOOGLE;
 };
 
-const signInWithRedirect = (apiBaseUrl: string, provider: IdentityProvider) => {
+const signInWithRedirect = async (
+  apiBaseUrl: string,
+  provider: IdentityProvider
+) => {
   const state = location.href;
+  const codeChallenge = await getCodeChallenge(getCodeVerifier());
   const loginUrl = new URL(`/auth/${provider.toLowerCase()}/login`, apiBaseUrl);
   loginUrl.searchParams.append('state', state);
+  loginUrl.searchParams.append('code_challenge', codeChallenge);
 
-  return location.replace(loginUrl.href);
+  location.replace(loginUrl.href);
+};
+
+const redeemHandoffCode = async (apiBaseUrl: string, handoffCode: string) => {
+  const codeVerifier = sessionStorage.getItem(OAUTH_CODE_VERIFIER_KEY);
+  if (!codeVerifier) {
+    throw new Error('OAuth code verifier is missing');
+  }
+
+  const response = await fetch(new URL('/auth/exchange', apiBaseUrl), {
+    method: 'post',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ handoffCode, codeVerifier }),
+  });
+  if (!response.ok) {
+    throw new Error('Could not redeem OAuth handoff code');
+  }
+
+  const result = (await response.json()) as {
+    tokens?: { accessToken?: string };
+  };
+  if (!result.tokens?.accessToken) {
+    throw new Error('OAuth handoff did not return an access token');
+  }
+
+  return result.tokens.accessToken;
 };
 
 export const initLoginRedirect = async () => {
@@ -99,7 +160,29 @@ export const initLoginRedirect = async () => {
     return signInWithRedirect(urlConfig.api, provider);
   }
 
-  await sendToken(result.accessToken);
+  let accessToken: string;
+  try {
+    accessToken = await redeemHandoffCode(urlConfig.api, result.handoffCode);
+  } catch {
+    document.body.innerText = 'Login failed. Please try again or close this window.';
+    return;
+  }
+
+  const sanitizedUrl = new URL(location.href);
+  sanitizedUrl.searchParams.delete('handoff_code');
+  history.replaceState(
+    null,
+    '',
+    `${sanitizedUrl.pathname}${sanitizedUrl.search}${sanitizedUrl.hash}`
+  );
+  try {
+    await sendToken(accessToken);
+  } catch {
+    cleanup();
+    document.body.innerText =
+      'Login failed. Please close this window and try again.';
+    return;
+  }
 
   cleanup();
   document.body.innerText = 'You can now close this window.';
