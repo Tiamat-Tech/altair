@@ -10,7 +10,6 @@ const snapPublish: Configuration['publish'] = isPublish
         : []),
       {
         provider: 'snapStore',
-        repo: 'altair',
         channels: [isProduction ? 'stable' : 'edge'],
       },
     ]
@@ -45,6 +44,7 @@ const config: Configuration = {
   },
   linux: {
     artifactName: '${name}_${version}_${arch}_linux.${ext}',
+    executableName: 'altair',
     icon: 'resources/icons',
     category: 'Development',
     maintainer: 'info@altairgraphql.dev',
