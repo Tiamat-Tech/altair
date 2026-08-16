@@ -10,6 +10,7 @@ const snapPublish: Configuration['publish'] = isPublish
         : []),
       {
         provider: 'snapStore',
+        repo: 'altair',
         channels: [isProduction ? 'stable' : 'edge'],
       },
     ]
